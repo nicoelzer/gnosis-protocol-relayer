@@ -1,0 +1,67 @@
+{
+  "name": "gnosis-protocol-relayer",
+  "version": "0.0.1",
+  "description": "A relayer that enables DAOs to swap tokens on Gnosis Protocol using on-chain price oracles",
+  "engines": {
+    "node": ">=10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nicoelzer/gnosis-protocol-relayer"
+  },
+  "files": [
+    "build",
+    "contracts"
+  ],
+  "config": {
+    "gasLimit": "6200000"
+  },
+  "dependencies": {
+    "dxswap-core": "git://github.com/levelkdev/dxswap-core.git#v0.3.0"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.10.1",
+    "@openzeppelin/contract-loader": "^0.6.1",
+    "@truffle/contract": "^4.2.21",
+    "babel-eslint": "^10.1.0",
+    "babel-plugin-syntax-async-functions": "^6.13.0",
+    "babel-polyfill": "^6.26.0",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-register": "^6.26.0",
+    "bignumber.js": "^5.0.0",
+    "cross-conf-env": "^1.1.2",
+    "default-options": "^1.0.0",
+    "dotenv": "^8.2.0",
+    "eslint": "^5.16.0",
+    "eslint-config-defaults": "^9.0.0",
+    "eslint-config-standard": "^11.0.0-beta.0",
+    "eslint-plugin-import": "^2.20.2",
+    "eslint-plugin-node": "^5.2.1",
+    "eslint-plugin-promise": "^3.6.0",
+    "eslint-plugin-react": "^7.20.0",
+    "eslint-plugin-standard": "^3.0.1",
+    "ethereumjs-abi": "^0.6.5",
+    "pm2": "^2.9.3",
+    "promisify": "^0.0.3",
+    "pug": "^2.0.0-rc.4",
+    "rimraf": "^2.6.2",
+    "run-with-ganache": "^0.1.1",
+    "solhint": "^3.1.0",
+    "solidity-coverage": "^0.7.10",
+    "truffle": "^5.1.28",
+    "truffle-hdwallet-provider": "^1.0.17",
+    "uint32": "^0.2.1"
+  },
+  "scripts": {
+    "lint": "yarn prettier ./test/*.ts --check",
+    "lint:fix": "yarn prettier ./test/*.ts --write",
+    "flattener": "./scripts/flattener.sh",
+    "test": "./scripts/test.sh",
+    "testnet": "./scripts/testnet.sh",
+    "coverage": "./scripts/coverage.sh",
+    "solhint": "solhint contracts/**/*.sol",
+    "build": "rimraf build && truffle compile",
+    "prettier": "prettier --write contracts/**/*.sol"
+  },
+  "license": "GPL-3.0-or-later"
+}
