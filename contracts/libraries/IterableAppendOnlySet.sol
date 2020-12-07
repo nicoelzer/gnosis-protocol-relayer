@@ -1,6 +1,5 @@
 pragma solidity ^0.6.6;
 
-
 library IterableAppendOnlySet {
     struct Data {
         mapping(address => address) nextMap;

@@ -1,6 +1,5 @@
 pragma solidity ^0.6.6;
 
-
 library IdToAddressBiMap {
     struct Data {
         mapping(uint16 => address) idToAddress;
@@ -25,7 +24,11 @@ library IdToAddressBiMap {
         return self.addressToId[addr] - 1;
     }
 
-    function insert(Data storage self, uint16 id, address addr) public returns (bool) {
+    function insert(
+        Data storage self,
+        uint16 id,
+        address addr
+    ) public returns (bool) {
         require(addr != address(0), "Cannot insert zero address");
         require(id != uint16(-1), "Cannot insert max uint16");
         // Ensure bijectivity of the mappings
@@ -36,5 +39,4 @@ library IdToAddressBiMap {
         self.addressToId[addr] = id + 1;
         return true;
     }
-
 }

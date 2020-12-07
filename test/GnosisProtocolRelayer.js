@@ -1,45 +1,36 @@
-const { contract, artifacts, web3, ethers, waffle } = require("hardhat");
+const { contract, ethers } = require("hardhat");
 const { expect } = require("chai");
-const { AddressZero, MaxUint256 } = require("@ethersproject/constants");
+const { AddressZero } = require("@ethersproject/constants");
 const { expandTo18Decimals, mineBlock } = require("./shared/utilities");
 const DXswapFactory = require("dxswap-core/build/DXswapFactory.json");
 const DXswapRouter = require("dxswap-periphery/build/DXswapRouter.json");
 const IDXswapPair = require("dxswap-core/build/IDXswapPair.json");
-const { zeroPad, isBytes } = require("ethers/lib/utils");
 
-let GnosisProtocolRelayer,
-  GnosisProtocolRelayerContract,
-  tokenA,
+let tokenA,
   tokenB,
   WETH,
   WETHPartner,
   dxswapFactory,
   dxswapRouter,
-  uniRouter,
-  dxswapPair,
-  WETHPair,
   uniFactory,
-  uniPair,
   batchExchange,
   epochTokenLocker,
   dxRelayer,
   oracleCreator,
   feeToken,
-  owner,
-  addr1,
   wallet,
   otherWallet;
 
 contract("GnosisProtcolRelayer", () => {
-  beforeEach("deploy contracts", async function() {
+  beforeEach("deploy contracts", async function () {
     [wallet, otherWallet] = await ethers.getSigners();
   });
 
-  describe("GnosisProtcolRelayer", function() {
+  describe("GnosisProtcolRelayer", function () {
     const defaultTolerance = 10000;
     const defaultMinReserve = expandTo18Decimals(5);
 
-    beforeEach("deploy contracts", async function() {
+    beforeEach("deploy contracts", async function () {
       WETH9 = await ethers.getContractFactory("WETH9");
       ERC20 = await ethers.getContractFactory("ERC20");
       const OracleCreator = await ethers.getContractFactory("OracleCreator");
@@ -60,8 +51,8 @@ contract("GnosisProtcolRelayer", () => {
       const BatchExchange = await ethers.getContractFactory("BatchExchange", {
         libraries: {
           IdToAddressBiMap: idToAddressBiMap.address,
-          IterableAppendOnlySet: iterableAppendOnlySet.address
-        }
+          IterableAppendOnlySet: iterableAppendOnlySet.address,
+        },
       });
 
       const factory = new ethers.ContractFactory(
@@ -113,7 +104,7 @@ contract("GnosisProtcolRelayer", () => {
     const defaultDeadline = startTime + 86400; // 24 hours
     beforeEach(`set start time to ${startTime}`, () => mineBlock(startTime));
 
-    describe("Initialization", function() {
+    describe("Initialization", function () {
       it("cannot deploy Relayer without Factory whitelist", async () => {
         const GnosisProtocolRelayer = await ethers.getContractFactory(
           "GnosisProtocolRelayer"
@@ -132,8 +123,8 @@ contract("GnosisProtcolRelayer", () => {
         );
       });
     });
-    describe("Creating orders", function() {
-      it("cannot place order with invalid factory", async function() {
+    describe("Creating orders", function () {
+      it("cannot place order with invalid factory", async function () {
         await expect(
           dxRelayer.orderTrade(
             tokenA.address,
@@ -148,7 +139,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: INVALID_FACTORY");
       });
 
-      it("cannot place order from other address then owner", async function() {
+      it("cannot place order from other address then owner", async function () {
         await expect(
           dxRelayer
             .connect(otherWallet)
@@ -165,7 +156,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: CALLER_NOT_OWNER");
       });
 
-      it("cannot place order with same tokens", async function() {
+      it("cannot place order with same tokens", async function () {
         await expect(
           dxRelayer.orderTrade(
             tokenA.address,
@@ -180,7 +171,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: INVALID_PAIR");
       });
 
-      it("cannot place order with zero amount", async function() {
+      it("cannot place order with zero amount", async function () {
         await expect(
           dxRelayer.orderTrade(
             tokenA.address,
@@ -195,7 +186,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT");
       });
 
-      it("cannot place order with invalid priceTolerance", async function() {
+      it("cannot place order with invalid priceTolerance", async function () {
         await expect(
           dxRelayer.orderTrade(
             tokenA.address,
@@ -210,7 +201,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: INVALID_TOLERANCE");
       });
 
-      it("cannot place order with deadline in past", async function() {
+      it("cannot place order with deadline in past", async function () {
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         await expect(
           dxRelayer.orderTrade(
@@ -226,7 +217,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: DEADLINE_REACHED");
       });
 
-      it("cannot place order with insufficient ETH value", async function() {
+      it("cannot place order with insufficient ETH value", async function () {
         await expect(
           dxRelayer.orderTrade(
             AddressZero,
@@ -238,13 +229,13 @@ contract("GnosisProtcolRelayer", () => {
             defaultDeadline,
             dxswapFactory.address,
             {
-              value: expandTo18Decimals(5)
+              value: expandTo18Decimals(5),
             }
           )
         ).to.be.revertedWith("GnosisProtocolRelayer: INSUFFIENT_ETH");
       });
 
-      it("cannot place order with insufficient token value", async function() {
+      it("cannot place order with insufficient token value", async function () {
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(5));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
           expandTo18Decimals(5)
@@ -263,7 +254,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: INSUFFIENT_TOKEN_IN");
       });
 
-      it("does not accept trade with unkown pair", async function() {
+      it("does not accept trade with unkown pair", async function () {
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
           expandTo18Decimals(10)
@@ -282,7 +273,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: UNKOWN_PAIR");
       });
 
-      it("creates a new order with token to token trade", async function() {
+      it("creates a new order with token to token trade", async function () {
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
           expandTo18Decimals(10)
@@ -300,7 +291,7 @@ contract("GnosisProtcolRelayer", () => {
         );
       });
 
-      it("creates a new order with ETH to token trade", async function() {
+      it("creates a new order with ETH to token trade", async function () {
         await dxswapFactory.createPair(WETH.address, tokenB.address);
         await dxRelayer.orderTrade(
           AddressZero,
@@ -312,12 +303,12 @@ contract("GnosisProtcolRelayer", () => {
           defaultDeadline,
           dxswapFactory.address,
           {
-            value: expandTo18Decimals(10)
+            value: expandTo18Decimals(10),
           }
         );
       });
 
-      it("creates a new order with token to ETH trade", async function() {
+      it("creates a new order with token to ETH trade", async function () {
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
           expandTo18Decimals(10)
@@ -336,8 +327,8 @@ contract("GnosisProtcolRelayer", () => {
       });
     });
 
-    describe("Updating the Oracle", function() {
-      it("updates the oracle", async function() {
+    describe("Updating the Oracle", function () {
+      it("updates the oracle", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);
         const pairAddress = await dxswapFactory.getPair(
           tokenA.address,
@@ -356,7 +347,7 @@ contract("GnosisProtcolRelayer", () => {
 
         await wallet.sendTransaction({
           to: dxRelayer.address,
-          value: expandTo18Decimals(10)
+          value: expandTo18Decimals(10),
         });
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
@@ -386,7 +377,7 @@ contract("GnosisProtcolRelayer", () => {
         await dxRelayer.updateOracle(0);
       });
 
-      it("cannot update the oracle after observation ended", async function() {
+      it("cannot update the oracle after observation ended", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);
         const pairAddress = await dxswapFactory.getPair(
           tokenA.address,
@@ -405,7 +396,7 @@ contract("GnosisProtcolRelayer", () => {
 
         await wallet.sendTransaction({
           to: dxRelayer.address,
-          value: expandTo18Decimals(1)
+          value: expandTo18Decimals(1),
         });
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
@@ -438,7 +429,7 @@ contract("GnosisProtcolRelayer", () => {
         );
       });
 
-      it("returns the correct oracleDetails", async function() {
+      it("returns the correct oracleDetails", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);
         const pairAddress = await dxswapFactory.getPair(
           tokenA.address,
@@ -457,7 +448,7 @@ contract("GnosisProtcolRelayer", () => {
 
         await wallet.sendTransaction({
           to: dxRelayer.address,
-          value: expandTo18Decimals(1)
+          value: expandTo18Decimals(1),
         });
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
@@ -492,7 +483,7 @@ contract("GnosisProtcolRelayer", () => {
         expect(await response.pair).to.eq(tokenPair);
       });
 
-      it("consults token prices", async function() {
+      it("consults token prices", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);
         const pairAddress = await dxswapFactory.getPair(
           tokenA.address,
@@ -511,7 +502,7 @@ contract("GnosisProtcolRelayer", () => {
 
         await wallet.sendTransaction({
           to: dxRelayer.address,
-          value: expandTo18Decimals(2)
+          value: expandTo18Decimals(2),
         });
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
@@ -544,16 +535,17 @@ contract("GnosisProtcolRelayer", () => {
           tokenA.address,
           expandTo18Decimals(1000)
         );
+        await oracleCreator.consult(0, WETH.address, expandTo18Decimals(1000));
       });
     });
 
-    describe("Withdrawal", function() {
-      it("withdraws tokens from Gnosis Protocol to the relayer", async function() {
+    describe("Withdrawal", function () {
+      it("withdraws tokens from Gnosis Protocol to the relayer", async function () {
         await dxRelayer.withdrawToken(tokenA.address);
         await dxRelayer.withdrawToken(WETH.address);
       });
 
-      it("only allows the owner to withdraw ERC20 tokens from the relayer", async function() {
+      it("only allows the owner to withdraw ERC20 tokens from the relayer", async function () {
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         await expect(
           dxRelayer
@@ -567,10 +559,10 @@ contract("GnosisProtcolRelayer", () => {
         );
       });
 
-      it("only allows the owner to withdraw ETH from the relayer", async function() {
+      it("only allows the owner to withdraw ETH from the relayer", async function () {
         await wallet.sendTransaction({
           to: dxRelayer.address,
-          value: expandTo18Decimals(10)
+          value: expandTo18Decimals(10),
         });
         await expect(
           dxRelayer.connect(otherWallet).ETHWithdraw(expandTo18Decimals(10))
@@ -580,7 +572,7 @@ contract("GnosisProtcolRelayer", () => {
         expect(await wallet.getBalance()).to.be.above(balanceBefore);
       });
 
-      it("can withdraw an expired order: ERC20 Token", async function() {
+      it("can withdraw an expired order: ERC20 Token", async function () {
         await mineBlock(startTime);
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
@@ -609,7 +601,7 @@ contract("GnosisProtcolRelayer", () => {
           .withArgs(0);
       });
 
-      it("can withdraw an expired order: ETH", async function() {
+      it("can withdraw an expired order: ETH", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);
         await dxRelayer.orderTrade(
           AddressZero,
@@ -621,7 +613,7 @@ contract("GnosisProtcolRelayer", () => {
           defaultDeadline + 5000,
           dxswapFactory.address,
           {
-            value: expandTo18Decimals(1)
+            value: expandTo18Decimals(1),
           }
         );
 
@@ -636,14 +628,14 @@ contract("GnosisProtcolRelayer", () => {
       });
     });
 
-    describe("Place Trade", function() {
-      it("cannot place non existent order", async function() {
+    describe("Place trade", function () {
+      it("cannot place non existent order", async function () {
         await expect(dxRelayer.placeTrade(3)).to.be.revertedWith(
           "GnosisProtocolRelayer: INVALID_ORDER"
         );
       });
 
-      it("places a trade", async function() {
+      it("places a trade", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);
         const pairAddress = await dxswapFactory.getPair(
           tokenA.address,
@@ -665,7 +657,7 @@ contract("GnosisProtcolRelayer", () => {
 
         await wallet.sendTransaction({
           to: dxRelayer.address,
-          value: expandTo18Decimals(1)
+          value: expandTo18Decimals(1),
         });
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
@@ -697,14 +689,14 @@ contract("GnosisProtcolRelayer", () => {
       });
     });
 
-    describe("Cancel Trade", function() {
-      it("can only be executed for valid orders", async function() {
+    describe("Cancel trade", function () {
+      it("can only be executed for valid orders", async function () {
         await expect(dxRelayer.cancelOrder(3)).to.be.revertedWith(
           "GnosisProtocolRelayer: INVALID_ORDER"
         );
       });
 
-      it("can only be executed by owner", async function() {
+      it("can only be executed by owner", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);
         await dxRelayer.orderTrade(
           AddressZero,
@@ -716,7 +708,7 @@ contract("GnosisProtcolRelayer", () => {
           defaultDeadline + 10000,
           dxswapFactory.address,
           {
-            value: expandTo18Decimals(1)
+            value: expandTo18Decimals(1),
           }
         );
         await expect(
@@ -724,7 +716,7 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: CALLER_NOT_OWNER");
       });
 
-      it("can cancel an existing order", async function() {
+      it("can cancel an existing order", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);
         const pairAddress = await dxswapFactory.getPair(
           tokenA.address,
@@ -746,7 +738,7 @@ contract("GnosisProtcolRelayer", () => {
 
         await wallet.sendTransaction({
           to: dxRelayer.address,
-          value: expandTo18Decimals(1)
+          value: expandTo18Decimals(1),
         });
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
@@ -776,7 +768,7 @@ contract("GnosisProtcolRelayer", () => {
         await dxRelayer.cancelOrder(0);
       });
 
-      it("returns the correct order data", async function() {
+      it("returns the correct order data", async function () {
         await dxswapFactory.createPair(tokenA.address, tokenB.address);
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         await dxRelayer.orderTrade(
@@ -789,7 +781,7 @@ contract("GnosisProtcolRelayer", () => {
           defaultDeadline + 10000,
           dxswapFactory.address,
           {
-            value: expandTo18Decimals(1)
+            value: expandTo18Decimals(1),
           }
         );
 
@@ -810,7 +802,7 @@ contract("GnosisProtcolRelayer", () => {
         expect(await response.executed).to.eq(false);
       });
 
-      it("cannot update oracle when deadline reached", async function() {
+      it("cannot update oracle when deadline reached", async function () {
         mineBlock(defaultDeadline + 1000);
         await expect(dxRelayer.updateOracle(0)).to.be.revertedWith(
           "GnosisProtocolRelayer: DEADLINE_REACHED"

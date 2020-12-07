@@ -2,19 +2,10 @@ require('dotenv').config();
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-truffle5");
 require("@nomiclabs/hardhat-ganache");
-
 require("solidity-coverage");
 
 const INFURA_PROJECT_ID = process.env.INFURA_KEY;
 const PRIVATE_KEY = process.env.PRIVATE_KEY;
-
-task("accounts", "Prints the list of accounts", async () => {
-  const accounts = await ethers.getSigners();
-
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
 
 module.exports = {
   solidity: {
@@ -26,9 +17,6 @@ module.exports = {
       }
     }
   },
-  mocha: {
-    timeout: 50000
-  },
   paths: {
     sources: "./contracts",
     tests: "./test",
@@ -38,31 +26,22 @@ module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
-      defaultBalanceEther: 1000000,
+      defaultBalanceEther: 1000,
     },
     localhost:{
       url: "http://127.0.0.1:8547",
       allowUnlimitedContractSize: true,
-      gasLimit: 60000000000000,
-      defaultBalanceEther: 1000000,
-      gas: 9000000,	
-      gasPrice: 10000000000, //10 Gwei	
+      defaultBalanceEther: 1000,
     },
     ganache: {
       url: "http://127.0.0.1:7545",
       allowUnlimitedContractSize: true,
-      gasLimit: 60000000000000,
       defaultBalanceEther: 1000,
-      gas: 9000000,	
-      gasPrice: 10000000000, //10 Gwei	
     },
     coverage: {
       url: "http://127.0.0.1:7545",
       allowUnlimitedContractSize: true,
-      gasLimit: 60000000000000,
-      defaultBalanceEther: 1000000,
-      gas: 9000000,	
-      gasPrice: 10000000000, //10 Gwei
+      defaultBalanceEther: 1000,
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,

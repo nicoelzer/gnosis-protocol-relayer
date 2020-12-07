@@ -173,7 +173,7 @@ contract BatchExchange is EpochTokenLocker {
     function hasToken(address addr) public view returns (bool) {
         return IdToAddressBiMap.hasAddress(registeredTokens, addr);
     }
-    
+
     // Private pure
     /** @dev used to determine if an order is valid for specific auction/batch
      * @param order object whose validity is in question

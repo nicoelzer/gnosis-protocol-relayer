@@ -52,9 +52,10 @@ contract EpochTokenLocker {
         updateDepositsBalance(msg.sender, token);
         SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         // solhint-disable-next-line max-line-length
-        balanceStates[msg.sender][token].pendingDeposits.amount = balanceStates[msg.sender][token].pendingDeposits.amount.add(
-            amount
-        );
+        balanceStates[msg.sender][token].pendingDeposits.amount = balanceStates[msg.sender][token]
+            .pendingDeposits
+            .amount
+            .add(amount);
         balanceStates[msg.sender][token].pendingDeposits.batchId = getCurrentBatchId();
         emit Deposit(msg.sender, token, amount, getCurrentBatchId());
     }
@@ -110,7 +111,8 @@ contract EpochTokenLocker {
             lastCreditBatchId[user][token] < getCurrentBatchId(),
             "Withdraw not possible for token that is traded in the current auction"
         );
-        uint256 amount = Math.min(balanceStates[user][token].balance, balanceStates[user][token].pendingWithdraws.amount);
+        uint256 amount =
+            Math.min(balanceStates[user][token].balance, balanceStates[user][token].pendingWithdraws.amount);
 
         balanceStates[user][token].balance = balanceStates[user][token].balance.sub(amount);
         delete balanceStates[user][token].pendingWithdraws;

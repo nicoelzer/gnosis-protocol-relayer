@@ -1,6 +1,6 @@
 # Gnosis Protocol Relayer
 
-A relayer that enables DAOs to swap tokens on Gnosis Protocol using on-chain price oracles.
+A relayer that enables DAOs to swap tokens on Gnosis Protocol using on-chain price oracles from Swapr or Uniswap.
 
 ## Local Development
 
