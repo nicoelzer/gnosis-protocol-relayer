@@ -1,15 +1,15 @@
 pragma solidity =0.6.6;
 pragma experimental ABIEncoderV2;
 
-import './OracleCreator.sol';
-import './interfaces/IDXswapFactory.sol';
 import './libraries/TransferHelper.sol';
+import './libraries/SafeMath.sol';
+import './libraries/DXswapLibrary.sol';
+import './interfaces/IDXswapFactory.sol';
 import './interfaces/IERC20.sol';
 import './interfaces/IWETH.sol';
 import './interfaces/IBatchExchange.sol';
 import './interfaces/IEpochTokenLocker.sol';
-import './libraries/SafeMath.sol';
-import './libraries/DXswapLibrary.sol';
+import './OracleCreator.sol';
 
 contract GnosisProtocolRelayer {
     using SafeMath for uint256;
@@ -37,6 +37,7 @@ contract GnosisProtocolRelayer {
         address oraclePair;
         uint256 deadline;
         uint256 oracleId;
+        uint256 gpOrderId;
         address factory;
         bool executed;
     }
@@ -44,37 +45,38 @@ contract GnosisProtocolRelayer {
     uint256 public immutable GAS_ORACLE_UPDATE = 168364;
     uint256 public immutable PARTS_PER_MILLION = 1000000;
     uint256 public immutable BOUNTY = 0.01 ether; // To be decided
-    uint256 public oracleWindowTime = 240; // 4 Minutes
-    uint32 public BATCH_TIME;
+    uint256 public immutable ORACLE_WINDOW_TIME = 120; // 2 Minutes
+    uint32 public immutable BATCH_TIME;
 
-    address public batchExchange;
-    address public epochTokenLocker;
+    address public immutable batchExchange;
+    address public immutable epochTokenLocker;
     address payable public immutable owner;
-    address public immutable dxSwapFactory;
-    address public immutable uniswapFactory;
     address public immutable WETH;
 
     OracleCreator oracleCreator;
     uint256 public orderCount;
     mapping(uint256 => Order) orders;
+    mapping(address => bool) exchangeFactoryWhitelist;
 
     constructor(
         address payable _owner,
         address _batchExchange,
         address _epochTokenLocker,
-        address _dxSwapFactory,
-        address _uniswapFactory,
+        address[] memory _factoryWhitelist,
         address _WETH,
         OracleCreator _oracleCreater
     ) public {
+        require(_factoryWhitelist.length > 0, 'GnosisProtocolRelayer: MISSING_FACTORY_WHITELIST');
         batchExchange = _batchExchange;
         epochTokenLocker = _epochTokenLocker;
-        dxSwapFactory = _dxSwapFactory;
-        uniswapFactory = _uniswapFactory;
         oracleCreator = _oracleCreater;
         owner = _owner;
         WETH = _WETH;
-        BATCH_TIME = IEpochTokenLocker(epochTokenLocker).BATCH_TIME();
+        BATCH_TIME = IEpochTokenLocker(_epochTokenLocker).BATCH_TIME();
+
+        for (uint i=0; i < _factoryWhitelist.length; i++) {
+            exchangeFactoryWhitelist[_factoryWhitelist[i]] = true;
+        }
     }
 
     function orderTrade(
@@ -87,14 +89,14 @@ contract GnosisProtocolRelayer {
         uint256 deadline,
         address factory
     ) external payable returns (uint256 orderIndex) {
-        require(factory == dxSwapFactory || factory == uniswapFactory, 'GnosisProtocolRelayer: INVALID_FACTORY');
+        require(exchangeFactoryWhitelist[factory], 'GnosisProtocolRelayer: INVALID_FACTORY');
         require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
         require(tokenIn != tokenOut, 'GnosisProtocolRelayer: INVALID_PAIR');
         require(tokenInAmount > 0 && tokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
         require(priceTolerance <= PARTS_PER_MILLION, 'GnosisProtocolRelayer: INVALID_TOLERANCE');
         require(block.timestamp <= deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
-        
         if (tokenIn == address(0)) {
+            require(msg.value >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFIENT_ETH');
             tokenIn = WETH;
             IWETH(WETH).deposit{value: tokenInAmount}();
         } else if (tokenOut == address(0)) {
@@ -103,6 +105,7 @@ contract GnosisProtocolRelayer {
         require(IERC20(tokenIn).balanceOf(address(this)) >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFIENT_TOKEN_IN');
 
         address pair = _pair(tokenIn, tokenOut, factory);
+        require(pair != address(0), 'GnosisProtocolRelayer: UNKOWN_PAIR');
         orderIndex = _OrderIndex();
         orders[orderIndex] = Order({
             tokenIn: tokenIn,
@@ -114,12 +117,13 @@ contract GnosisProtocolRelayer {
             oraclePair: pair,
             deadline: deadline,
             oracleId: 0,
+            gpOrderId: 0,
             factory: factory,
             executed: false
         });
 
         /* Create an oracle to calculate average price */
-        orders[orderIndex].oracleId = oracleCreator.createOracle(oracleWindowTime, pair);
+        orders[orderIndex].oracleId = oracleCreator.createOracle(ORACLE_WINDOW_TIME, pair);
         emit NewOrder(orderIndex);
     }
 
@@ -131,14 +135,13 @@ contract GnosisProtocolRelayer {
         require(block.timestamp <= order.deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
 
         /* Approve token on Gnosis Protocol */
-        TransferHelper.safeApprove(order.tokenIn, batchExchange, order.tokenInAmount);
+        TransferHelper.safeApprove(order.tokenIn, epochTokenLocker, order.tokenInAmount);
 
         /* Deposit token in Gnosis Protocol */
         IEpochTokenLocker(epochTokenLocker).deposit(order.tokenIn, order.tokenInAmount);
 
         uint16 sellToken = IBatchExchange(batchExchange).tokenAddressToIdMap(order.tokenIn);
         uint16 buyToken = IBatchExchange(batchExchange).tokenAddressToIdMap(order.tokenOut);
-        
         uint256 expectedAmount = oracleCreator.consult(
           order.oracleId,
           order.tokenIn == address(0) ? WETH : order.tokenIn,
@@ -153,7 +156,19 @@ contract GnosisProtocolRelayer {
        
         order.executed = true;
         uint256 GPorderId = IBatchExchange(batchExchange).placeOrder(buyToken, sellToken, validUntil, uint128(expectedAmountMin), order.tokenInAmount);
+        order.gpOrderId = GPorderId;
         emit PlacedTrade(orderIndex, GPorderId);
+    }
+
+    function cancelOrder(uint256 orderIndex) external {
+        Order storage order = orders[orderIndex];
+        require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
+        require(orderIndex <= orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
+        require(order.executed, 'GnosisProtocolRelayer: ORDER_EXECUTED');
+
+        uint16[] memory orderArray = new uint16[](1);
+        orderArray[0] = uint16(orderIndex);
+        IBatchExchange(batchExchange).cancelOrders(orderArray);
     }
 
     // Updates a price oracle and sends a bounty to msg.sender
@@ -162,10 +177,8 @@ contract GnosisProtocolRelayer {
         require(block.timestamp <= order.deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
         require(!oracleCreator.isOracleFinalized(order.oracleId) , 'GnosisProtocolRelayer: OBSERVATION_ENDED');
         uint256 amountBounty = GAS_ORACLE_UPDATE.mul(tx.gasprice).add(BOUNTY);
-        require(address(this).balance >= amountBounty, 'GnosisProtocolRelayer: INSUFFICIENT_BALANCE');
         (uint reserve0, uint reserve1,) = IDXswapPair(order.oraclePair).getReserves();
         address token0 = IDXswapPair(order.oraclePair).token0();
-        address token1 = IDXswapPair(order.oraclePair).token1();
         address tokenIn = order.tokenIn == address(0) ? WETH : order.tokenIn;
 
         // Makes sure the reserve of TokenIn is higher then minReserve
@@ -182,17 +195,17 @@ contract GnosisProtocolRelayer {
         }
         
         oracleCreator.update(order.oracleId);
-        TransferHelper.safeTransferETH(msg.sender, amountBounty);
+        if(address(this).balance >= amountBounty){
+            TransferHelper.safeTransferETH(msg.sender, amountBounty);
+        }
     }
 
-    function withdrawExpiredOrder(uint256 orderIndex) external {
+    function withdrawExpiredOrder(uint256 orderIndex) external payable {
         Order storage order = orders[orderIndex];
-        require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
         require(block.timestamp > order.deadline, 'GnosisProtocolRelayer: DEADLINE_NOT_REACHED');
         require(order.executed == false, 'GnosisProtocolRelayer: ORDER_EXECUTED');
 
-        IEpochTokenLocker(epochTokenLocker).withdraw(address(this), order.tokenIn);
-        if (order.tokenIn == address(0)) {
+        if (order.tokenIn == WETH) {
             IWETH(WETH).withdraw(order.tokenInAmount);
             TransferHelper.safeTransferETH(owner, order.tokenInAmount);
         } else {
@@ -204,13 +217,17 @@ contract GnosisProtocolRelayer {
     }
 
     // Releases tokens from Gnosis Protocol
-    function withdrawToken(address token) external {
+    function withdrawToken(address token) public {
       IEpochTokenLocker(epochTokenLocker).withdraw(address(this), token);
+      if (token == WETH) {
+          uint balance = IWETH(WETH).balanceOf(address(this));
+          IWETH(WETH).withdraw(balance);
+      }
     }
 
-    // Internal function to return the correct pair address on either DXswap or Uniswap
+    // Internal function to return the pair address on a given factory
     function _pair(address tokenA, address tokenB, address factory) internal view returns (address pair) {
-      require(factory == dxSwapFactory || factory == uniswapFactory, 'GnosisProtocolRelayer: INVALID_FACTORY');
+      require(exchangeFactoryWhitelist[factory], 'GnosisProtocolRelayer: INVALID_FACTORY');
       pair = IDXswapFactory(factory).getPair(tokenA, tokenB);
     }
 

@@ -3,6 +3,7 @@ module.exports = {
       'interfaces/',
       'libraries/',
       'test/',
+      'mocks/',
   ],
   istanbulReporter: ['html']
 };

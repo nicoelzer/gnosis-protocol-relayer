@@ -1,7 +1,6 @@
 pragma solidity =0.6.6;
 
-import '../libraries/SafeMath.sol';
-
+import "@openzeppelin/contracts/math/SafeMath.sol";
 contract ERC20 {
     using SafeMath for uint;
 
@@ -21,10 +20,13 @@ contract ERC20 {
     event Transfer(address indexed from, address indexed to, uint value);
 
     constructor(uint _totalSupply) public {
-        uint chainId;
+
+        // Hardcoded as of hardhat known issue: https://github.com/nomiclabs/hardhat/issues/952
+        /*uint chainId;
         assembly {
             chainId := chainid()
-        }
+        }*/
+        uint chainId = 1;
         DOMAIN_SEPARATOR = keccak256(
             abi.encode(
                 keccak256('EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)'),
