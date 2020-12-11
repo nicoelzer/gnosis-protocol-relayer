@@ -26,22 +26,22 @@ module.exports = {
   defaultNetwork: "hardhat",
   networks: {
     hardhat: {
-      defaultBalanceEther: 1000,
+      defaultBalanceEther: 200,
     },
     localhost:{
       url: "http://127.0.0.1:8547",
       allowUnlimitedContractSize: true,
-      defaultBalanceEther: 1000,
+      defaultBalanceEther: 200,
     },
     ganache: {
       url: "http://127.0.0.1:7545",
       allowUnlimitedContractSize: true,
-      defaultBalanceEther: 1000,
+      defaultBalanceEther: 200,
     },
     coverage: {
       url: "http://127.0.0.1:7545",
       allowUnlimitedContractSize: true,
-      defaultBalanceEther: 1000,
+      defaultBalanceEther: 200,
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,

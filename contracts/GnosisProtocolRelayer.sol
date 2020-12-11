@@ -47,6 +47,8 @@ contract GnosisProtocolRelayer {
     uint256 public immutable BOUNTY = 0.01 ether; // To be decided
     uint256 public immutable ORACLE_WINDOW_TIME = 120; // 2 Minutes
     uint32 public immutable BATCH_TIME;
+    uint32 public immutable UINT32_MAX_VALUE = 2**32 - 1;
+    uint128 public immutable UINT128_MAX_VALUE = 2**128 - 1;
 
     address public immutable batchExchange;
     address public immutable epochTokenLocker;
@@ -94,6 +96,7 @@ contract GnosisProtocolRelayer {
         require(tokenIn != tokenOut, 'GnosisProtocolRelayer: INVALID_PAIR');
         require(tokenInAmount > 0 && tokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
         require(priceTolerance <= PARTS_PER_MILLION, 'GnosisProtocolRelayer: INVALID_TOLERANCE');
+        require(deadline <= UINT32_MAX_VALUE, 'GnosisProtocolRelayer: INVALID_DEADLINE');
         require(block.timestamp <= deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
         if (tokenIn == address(0)) {
             require(msg.value >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFIENT_ETH');
@@ -129,11 +132,12 @@ contract GnosisProtocolRelayer {
 
     function placeTrade(uint256 orderIndex) external {
         Order storage order = orders[orderIndex];
-        require(orderIndex <= orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
+        require(orderIndex < orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
         require(!order.executed, 'GnosisProtocolRelayer: ORDER_EXECUTED');
         require(oracleCreator.isOracleFinalized(order.oracleId) , 'GnosisProtocolRelayer: OBSERVATION_RUNNING');
         require(block.timestamp <= order.deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
 
+        order.executed = true;
         /* Approve token on Gnosis Protocol */
         TransferHelper.safeApprove(order.tokenIn, epochTokenLocker, order.tokenInAmount);
 
@@ -151,10 +155,15 @@ contract GnosisProtocolRelayer {
         );
 
         uint256 expectedAmountMin = expectedAmount.sub(expectedAmount.mul(order.priceTolerance) / PARTS_PER_MILLION);
+        uint256 expectedTokenOutAmount = order.tokenOutAmount;
+        require(
+            expectedAmountMin >= expectedTokenOutAmount.sub(expectedTokenOutAmount.mul(order.priceTolerance) / PARTS_PER_MILLION),
+            'GnosisProtocolRelayer: INVALID_PRICE_RANGE'
+        );
+        require(expectedAmountMin <= UINT128_MAX_VALUE,'GnosisProtocolRelayer: AMOUNT_OUT_OF_RANGE');
        
         /* Calculate batch Deadline (5 Minutes window) */
         uint32 validUntil = uint32(order.deadline/BATCH_TIME);
-        order.executed = true;
         uint256 gpOrderId = IBatchExchange(batchExchange).placeOrder(buyToken, sellToken, validUntil, uint128(expectedAmountMin), order.tokenInAmount);
         order.gpOrderId = gpOrderId;
         emit PlacedTrade(orderIndex, gpOrderId);
@@ -162,20 +171,19 @@ contract GnosisProtocolRelayer {
 
     function cancelOrder(uint256 orderIndex) external {
         Order storage order = orders[orderIndex];
-        require(orderIndex <= orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
+        require(orderIndex < orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
         require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
-        require(orderIndex <= orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
-        require(order.executed, 'GnosisProtocolRelayer: ORDER_EXECUTED');
+        require(order.executed, 'GnosisProtocolRelayer: ORDER_NOT_EXECUTED');
 
         uint16[] memory orderArray = new uint16[](1);
-        orderArray[0] = uint16(orderIndex);
+        orderArray[0] = uint16(order.gpOrderId);
         IBatchExchange(batchExchange).cancelOrders(orderArray);
     }
 
     // Updates a price oracle and sends a bounty to msg.sender
     function updateOracle(uint256 orderIndex) external {
         Order storage order = orders[orderIndex];
-        require(orderIndex <= orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
+        require(orderIndex < orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
         require(block.timestamp <= order.deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
         require(!oracleCreator.isOracleFinalized(order.oracleId) , 'GnosisProtocolRelayer: OBSERVATION_ENDED');
         uint256 amountBounty = GAS_ORACLE_UPDATE.mul(tx.gasprice).add(BOUNTY);
@@ -202,11 +210,11 @@ contract GnosisProtocolRelayer {
         }
     }
 
-    function withdrawExpiredOrder(uint256 orderIndex) external payable {
+    function withdrawExpiredOrder(uint256 orderIndex) external {
         Order storage order = orders[orderIndex];
-        require(orderIndex <= orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
+        require(orderIndex < orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
         require(block.timestamp > order.deadline, 'GnosisProtocolRelayer: DEADLINE_NOT_REACHED');
-        require(order.executed == false, 'GnosisProtocolRelayer: ORDER_EXECUTED');
+        require(!order.executed, 'GnosisProtocolRelayer: ORDER_EXECUTED');
 
         if (order.tokenIn == WETH) {
             IWETH(WETH).withdraw(order.tokenInAmount);

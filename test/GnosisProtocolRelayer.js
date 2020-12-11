@@ -21,6 +21,8 @@ let tokenA,
   wallet,
   otherWallet;
 
+const UINT32_MAX = Math.pow(2,32) - 1;
+
 contract("GnosisProtcolRelayer", () => {
   beforeEach("deploy contracts", async function () {
     [wallet, otherWallet] = await ethers.getSigners();
@@ -217,6 +219,22 @@ contract("GnosisProtcolRelayer", () => {
         ).to.be.revertedWith("GnosisProtocolRelayer: DEADLINE_REACHED");
       });
 
+      it("cannot place order with deadline greater uint32 max value", async function () {
+        await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
+        await expect(
+          dxRelayer.orderTrade(
+            tokenA.address,
+            tokenB.address,
+            expandTo18Decimals(10),
+            expandTo18Decimals(10),
+            defaultTolerance,
+            defaultMinReserve,
+            UINT32_MAX + 1,
+            dxswapFactory.address
+          )
+        ).to.be.revertedWith("GnosisProtocolRelayer: INVALID_DEADLINE");
+      });
+
       it("cannot place order with insufficient ETH value", async function () {
         await expect(
           dxRelayer.orderTrade(
@@ -340,14 +358,14 @@ contract("GnosisProtcolRelayer", () => {
           wallet
         );
 
-        await tokenA.transfer(pairAddress, expandTo18Decimals(50));
-        await WETH.deposit({ value: expandTo18Decimals(50) });
-        await WETH.transfer(pairAddress, expandTo18Decimals(50));
+        await tokenA.transfer(pairAddress, expandTo18Decimals(10));
+        await WETH.deposit({ value: expandTo18Decimals(10) });
+        await WETH.transfer(pairAddress, expandTo18Decimals(10));
         await pair.mint(wallet.address);
 
         await wallet.sendTransaction({
           to: dxRelayer.address,
-          value: expandTo18Decimals(10),
+          value: expandTo18Decimals(1),
         });
         await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
         expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
@@ -687,6 +705,67 @@ contract("GnosisProtcolRelayer", () => {
           .to.emit(dxRelayer, "PlacedTrade")
           .withArgs(0, 0);
       });
+
+      it("cannot place a trade twice", async function () {
+        await dxswapFactory.createPair(tokenA.address, WETH.address);
+        const pairAddress = await dxswapFactory.getPair(
+          tokenA.address,
+          WETH.address
+        );
+        const pair = await new ethers.Contract(
+          pairAddress,
+          IDXswapPair.abi,
+          wallet
+        );
+
+        await tokenA.transfer(pairAddress, expandTo18Decimals(5));
+        await WETH.deposit({ value: expandTo18Decimals(5) });
+        await WETH.transfer(pairAddress, expandTo18Decimals(5));
+        await pair.mint(wallet.address);
+
+        await batchExchange.addToken(tokenA.address);
+        await batchExchange.addToken(WETH.address);
+
+        await wallet.sendTransaction({
+          to: dxRelayer.address,
+          value: expandTo18Decimals(1),
+        });
+        await tokenA.transfer(dxRelayer.address, expandTo18Decimals(10));
+        expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
+          expandTo18Decimals(10)
+        );
+        await expect(
+          dxRelayer.orderTrade(
+            tokenA.address,
+            AddressZero,
+            expandTo18Decimals(10),
+            expandTo18Decimals(1),
+            defaultTolerance,
+            defaultMinReserve,
+            defaultDeadline + 10000,
+            dxswapFactory.address
+          )
+        )
+          .to.emit(dxRelayer, "NewOrder")
+          .withArgs(0);
+
+        mineBlock(defaultDeadline + 7500);
+        await dxRelayer.updateOracle(0);
+        await expect(dxRelayer.placeTrade(0)).to.be.revertedWith(
+          "GnosisProtocolRelayer: OBSERVATION_RUNNING"
+        );
+        mineBlock(defaultDeadline + 8500);
+        await dxRelayer.updateOracle(0);
+
+        await expect(dxRelayer.placeTrade(0))
+          .to.emit(dxRelayer, "PlacedTrade")
+          .withArgs(0, 0);
+      
+        await expect(dxRelayer.placeTrade(0)).to.be.revertedWith(
+          "GnosisProtocolRelayer: ORDER_EXECUTED"
+        );
+      });
+
     });
 
     describe("Cancel trade", function () {
@@ -759,9 +838,9 @@ contract("GnosisProtcolRelayer", () => {
           .to.emit(dxRelayer, "NewOrder")
           .withArgs(0);
 
-        mineBlock(defaultDeadline + 7500);
-        await dxRelayer.updateOracle(0);
         mineBlock(defaultDeadline + 8500);
+        await dxRelayer.updateOracle(0);
+        mineBlock(defaultDeadline + 9500);
         await dxRelayer.updateOracle(0);
 
         await dxRelayer.placeTrade(0);
@@ -803,7 +882,49 @@ contract("GnosisProtcolRelayer", () => {
       });
 
       it("cannot update oracle when deadline reached", async function () {
-        mineBlock(defaultDeadline + 1000);
+        await dxswapFactory.createPair(tokenA.address, WETH.address);
+        const pairAddress = await dxswapFactory.getPair(
+          tokenA.address,
+          WETH.address
+        );
+        const pair = await new ethers.Contract(
+          pairAddress,
+          IDXswapPair.abi,
+          wallet
+        );
+
+        await tokenA.transfer(pairAddress, expandTo18Decimals(5));
+        await WETH.deposit({ value: expandTo18Decimals(5) });
+        await WETH.transfer(pairAddress, expandTo18Decimals(5));
+        await pair.mint(wallet.address);
+
+        await batchExchange.addToken(tokenA.address);
+        await batchExchange.addToken(WETH.address);
+
+        await wallet.sendTransaction({
+          to: dxRelayer.address,
+          value: expandTo18Decimals(1),
+        });
+        await tokenA.transfer(dxRelayer.address, expandTo18Decimals(5));
+        expect(await tokenA.balanceOf(dxRelayer.address)).to.eq(
+          expandTo18Decimals(5)
+        );
+        await expect(
+          dxRelayer.orderTrade(
+            tokenA.address,
+            AddressZero,
+            expandTo18Decimals(1),
+            expandTo18Decimals(1),
+            defaultTolerance,
+            defaultMinReserve,
+            defaultDeadline + 9600,
+            dxswapFactory.address
+          )
+        )
+          .to.emit(dxRelayer, "NewOrder")
+          .withArgs(0);
+
+        mineBlock(defaultDeadline + 10000);
         await expect(dxRelayer.updateOracle(0)).to.be.revertedWith(
           "GnosisProtocolRelayer: DEADLINE_REACHED"
         );
