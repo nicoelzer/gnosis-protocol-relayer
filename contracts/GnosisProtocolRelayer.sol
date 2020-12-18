@@ -44,7 +44,7 @@ contract GnosisProtocolRelayer {
 
     uint256 public immutable GAS_ORACLE_UPDATE = 168364;
     uint256 public immutable PARTS_PER_MILLION = 1000000;
-    uint256 public immutable BOUNTY = 0.01 ether; // To be decided
+    uint256 public immutable BOUNTY = 0.01 ether;
     uint256 public immutable ORACLE_WINDOW_TIME = 120; // 2 Minutes
     uint32 public immutable BATCH_TIME;
     uint32 public immutable UINT32_MAX_VALUE = 2**32 - 1;

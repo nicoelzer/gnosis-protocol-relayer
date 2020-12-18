@@ -47,16 +47,8 @@ module.exports = {
       url: `https://mainnet.infura.io/v3/${INFURA_PROJECT_ID}`,
       accounts: [PRIVATE_KEY]
     },
-    ropsten: {
-      url: `https://ropsten.infura.io/v3/${INFURA_PROJECT_ID}`,
-      accounts: [PRIVATE_KEY]
-    },
-    rinkeby: {
-      url: `https://rinkeby.infura.io/v3/${INFURA_PROJECT_ID}`,
-      accounts: [PRIVATE_KEY]
-    },
-    kovan: {
-      url: `https://kovan.infura.io/v3/${INFURA_PROJECT_ID}`,
+    xdai: {
+      url: `https://dai.poa.network`,
       accounts: [PRIVATE_KEY]
     }
   }

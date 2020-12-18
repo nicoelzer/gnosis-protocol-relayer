@@ -1,6 +1,6 @@
 {
   "name": "gnosis-protocol-relayer",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "A relayer that enables DAOs to swap tokens on Gnosis Protocol using on-chain price oracles",
   "engines": {
     "node": ">=10"
@@ -19,7 +19,8 @@
     "@openzeppelin/contracts": "^3.3.0",
     "dxswap-core": "git://github.com/levelkdev/dxswap-core.git#v0.3.1",
     "dxswap-periphery": "git://github.com/levelkdev/dxswap-periphery.git#v0.3.2",
-    "solidity-bytes-utils": "^0.1.1"
+    "solidity-bytes-utils": "^0.1.1",
+    "truffle-flattener": "^1.5.0"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.1",
@@ -44,7 +45,10 @@
     "coverage": "hardhat --network coverage coverage",
     "build": "rimraf artifacts && rimraf cache && npx hardhat compile",
     "prettier": "prettier --write contracts/**/*.sol",
-    "clean": "rimraf artifacts && rimraf cache && rimraf coverage && rimraf coverage.json"
+    "clean": "rimraf artifacts && rimraf cache && rimraf coverage && rimraf coverage.json rimraf contracts/.flattened",
+    "flatten": "./scripts/flatten.sh",
+    "deploy": "npx hardhat run --network mainnet scripts/deploy.js",
+    "deploy:xdai": "npx hardhat run --network xdai scripts/deploy.js"
   },
   "license": "GPL-3.0-or-later"
 }

@@ -14,6 +14,14 @@ The following assumes the use of `node@>=10`.
 
 `yarn`
 
+## Setup .env file
+
+Create new .env file and configure variables accordingly:
+```bash
+PRIVATE_KEY=""
+INFURA_KEY=""
+```
+
 ## Compile Contracts
 
 `yarn build`
@@ -25,3 +33,11 @@ The following assumes the use of `node@>=10`.
 ## Flatten Contracts
 
 `yarn flattener`
+
+## Deploy Contracts
+
+Deploy on Mainnet:
+`yarn deploy`
+
+Deploy on xDAI:
+`yarn deploy:xdai`
