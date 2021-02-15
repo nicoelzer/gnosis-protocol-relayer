@@ -21,7 +21,7 @@ async function main() {
   switch (network.name) {
     case "mainnet":
       WETH = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
-      owner = "0x519b70055af55a007110b4ff99b0ea33071c720a";
+      owner = "0xA601aeD34dda12fF760d8ABb64Fd4Eb3664E35Af";
       batchExchange = "0x6f400810b62df8e13fded51be75ff5393eaa841f";
       epochTokenLocker = "0x6f400810b62df8e13fded51be75ff5393eaa841f";
       swaprFactory = "0xd34971bab6e5e356fd250715f5de0492bb070452";
@@ -30,7 +30,7 @@ async function main() {
       break;
     case "xdai":
       WETH = "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d";
-      owner = "0xe716ec63c5673b3a4732d22909b38d779fa47c3f";
+      owner = "0xA601aeD34dda12fF760d8ABb64Fd4Eb3664E35Af";
       batchExchange = "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313";
       epochTokenLocker = "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313";
       honeyswapFactory = "0xa818b4f111ccac7aa31d0bcc0806d64f2e0737d7";

@@ -7,5 +7,7 @@ interface IEpochTokenLocker {
 
     function getCurrentBatchId() external view returns (uint32);
 
+    function requestWithdraw(address token, uint256 amount) external;
+
     function BATCH_TIME() external view returns (uint32);
 }

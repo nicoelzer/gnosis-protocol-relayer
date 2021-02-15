@@ -35,6 +35,7 @@ contract GnosisProtocolRelayer {
         uint256 priceTolerance;
         uint256 minReserve;
         address oraclePair;
+        uint256 startDate;
         uint256 deadline;
         uint256 oracleId;
         uint256 gpOrderId;
@@ -88,6 +89,7 @@ contract GnosisProtocolRelayer {
         uint128 tokenOutAmount,
         uint256 priceTolerance,
         uint256 minReserve,
+        uint256 startDate,
         uint256 deadline,
         address factory
     ) external payable returns (uint256 orderIndex) {
@@ -118,6 +120,7 @@ contract GnosisProtocolRelayer {
             priceTolerance: priceTolerance,
             minReserve: minReserve,
             oraclePair: pair,
+            startDate: startDate,
             deadline: deadline,
             oracleId: 0,
             gpOrderId: 0,
@@ -136,6 +139,7 @@ contract GnosisProtocolRelayer {
         require(!order.executed, 'GnosisProtocolRelayer: ORDER_EXECUTED');
         require(oracleCreator.isOracleFinalized(order.oracleId) , 'GnosisProtocolRelayer: OBSERVATION_RUNNING');
         require(block.timestamp <= order.deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
+        require(block.timestamp > order.startDate , 'GnosisProtocolRelayer: FUTURE_STARTDATE');
 
         order.executed = true;
         /* Approve token on Gnosis Protocol */
@@ -186,6 +190,7 @@ contract GnosisProtocolRelayer {
         require(orderIndex < orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
         require(block.timestamp <= order.deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
         require(!oracleCreator.isOracleFinalized(order.oracleId) , 'GnosisProtocolRelayer: OBSERVATION_ENDED');
+        require(block.timestamp > order.startDate, 'GnosisProtocolRelayer: FUTURE_STARTDATE');
         uint256 amountBounty = GAS_ORACLE_UPDATE.mul(tx.gasprice).add(BOUNTY);
         (uint reserve0, uint reserve1,) = IDXswapPair(order.oraclePair).getReserves();
         address token0 = IDXswapPair(order.oraclePair).token0();
@@ -227,12 +232,23 @@ contract GnosisProtocolRelayer {
         emit WithdrawnExpiredOrder(orderIndex);
     }
 
+    // Requests a token withdraw on GP
+    function requestWithdraw(address token, uint256 amount) public{
+      require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
+      IEpochTokenLocker(epochTokenLocker).requestWithdraw(token,amount);
+    }
+
     // Releases tokens from Gnosis Protocol
     function withdrawToken(address token) public {
+      require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
       IEpochTokenLocker(epochTokenLocker).withdraw(address(this), token);
       if (token == WETH) {
           uint balance = IWETH(WETH).balanceOf(address(this));
           IWETH(WETH).withdraw(balance);
+          ETHWithdraw(balance);
+      } else {
+          uint balance = IERC20(token).balanceOf(address(this));
+          ERC20Withdraw(token, balance);
       }
     }
 
@@ -249,13 +265,13 @@ contract GnosisProtocolRelayer {
     }
     
     // Allows the owner to withdraw any ERC20 from the relayer
-    function ERC20Withdraw(address token, uint256 amount) external {
+    function ERC20Withdraw(address token, uint256 amount) public {
         require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
         TransferHelper.safeTransfer(token, owner, amount);
     }
 
     // Allows the owner to withdraw any ETH amount from the relayer
-    function ETHWithdraw(uint256 amount) external {
+    function ETHWithdraw(uint256 amount) public {
         require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
         TransferHelper.safeTransferETH(owner, amount);
     }
