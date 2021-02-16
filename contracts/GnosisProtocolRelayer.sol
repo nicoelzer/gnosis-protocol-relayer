@@ -264,7 +264,7 @@ contract GnosisProtocolRelayer {
         orderCount++;
     }
 
-    function changeOwner(address _newOwner){
+    function changeOwner(address _newOwner) public{
       require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
       owner = _newOwner;
     }
