@@ -1,0 +1,62 @@
+{
+  "id": "500d9e0b02187f926dafd328e228984c",
+  "_format": "hh-sol-build-info-1",
+  "solcVersion": "0.6.6",
+  "solcLongVersion": "0.6.6+commit.6c089d02",
+  "input": {
+    "language": "Solidity",
+    "sources": {
+      "contracts/test/DXswapRouter.sol": {
+        "content": ""
+      }
+    },
+    "settings": {
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers"
+          ],
+          "": [
+            "ast"
+          ]
+        }
+      }
+    }
+  },
+  "output": {
+    "errors": [
+      {
+        "component": "general",
+        "formattedMessage": "contracts/test/DXswapRouter.sol: Warning: Source file does not specify required compiler version! Consider adding \"pragma solidity ^0.6.6;\"\n",
+        "message": "Source file does not specify required compiler version! Consider adding \"pragma solidity ^0.6.6;\"",
+        "severity": "warning",
+        "sourceLocation": {
+          "end": -1,
+          "file": "contracts/test/DXswapRouter.sol",
+          "start": -1
+        },
+        "type": "Warning"
+      }
+    ],
+    "sources": {
+      "contracts/test/DXswapRouter.sol": {
+        "ast": {
+          "absolutePath": "contracts/test/DXswapRouter.sol",
+          "exportedSymbols": {},
+          "id": 1,
+          "nodeType": "SourceUnit",
+          "nodes": [],
+          "src": "0:0:0"
+        },
+        "id": 0
+      }
+    }
+  }
+}
