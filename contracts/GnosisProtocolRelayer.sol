@@ -53,7 +53,7 @@ contract GnosisProtocolRelayer {
 
     address public immutable batchExchange;
     address public immutable epochTokenLocker;
-    address payable public immutable owner;
+    address payable public owner;
     address public immutable WETH;
 
     OracleCreator public oracleCreator;
@@ -262,6 +262,11 @@ contract GnosisProtocolRelayer {
     function _OrderIndex() internal returns(uint256 orderIndex){
         orderIndex = orderCount;
         orderCount++;
+    }
+
+    function changeOwner(address _newOwner){
+      require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
+      owner = _newOwner;
     }
     
     // Allows the owner to withdraw any ERC20 from the relayer
