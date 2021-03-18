@@ -106,7 +106,7 @@ contract GnosisProtocolRelayer {
         require(deadline <= UINT32_MAX_VALUE, 'GnosisProtocolRelayer: INVALID_DEADLINE');
         require(block.timestamp <= deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
         if (tokenIn == address(0)) {
-            require(address(this).balance >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFIENT_ETH');
+            require(address(this).balance >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFICIENT_ETH');
             tokenIn = WETH;
             IWETH(WETH).deposit{value: tokenInAmount}();
         } else if (tokenOut == address(0)) {
