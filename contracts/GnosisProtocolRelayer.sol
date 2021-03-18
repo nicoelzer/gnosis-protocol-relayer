@@ -20,7 +20,12 @@ contract GnosisProtocolRelayer {
 
     event PlacedTrade(
         uint256 indexed _orderIndex,
-        uint256 _gpOrderID
+        uint256 _gpOrderID,
+        uint16 buyToken,
+        uint16 sellToken,
+        uint32 validUntil,
+        uint128 expectedAmountMin,
+        uint128 tokenInAmount
     );
 
     event WithdrawnExpiredOrder(
@@ -31,7 +36,7 @@ contract GnosisProtocolRelayer {
         address tokenIn;
         address tokenOut;
         uint128 tokenInAmount;
-        uint128 tokenOutAmount;
+        uint128 minTokenOutAmount;
         uint256 priceTolerance;
         uint256 minReserve;
         address oraclePair;
@@ -86,7 +91,7 @@ contract GnosisProtocolRelayer {
         address tokenIn,
         address tokenOut,
         uint128 tokenInAmount,
-        uint128 tokenOutAmount,
+        uint128 minTokenOutAmount,
         uint256 priceTolerance,
         uint256 minReserve,
         uint256 startDate,
@@ -96,7 +101,7 @@ contract GnosisProtocolRelayer {
         require(exchangeFactoryWhitelist[factory], 'GnosisProtocolRelayer: INVALID_FACTORY');
         require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
         require(tokenIn != tokenOut, 'GnosisProtocolRelayer: INVALID_PAIR');
-        require(tokenInAmount > 0 && tokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
+        require(tokenInAmount > 0 && minTokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
         require(priceTolerance <= PARTS_PER_MILLION, 'GnosisProtocolRelayer: INVALID_TOLERANCE');
         require(deadline <= UINT32_MAX_VALUE, 'GnosisProtocolRelayer: INVALID_DEADLINE');
         require(block.timestamp <= deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
@@ -116,7 +121,7 @@ contract GnosisProtocolRelayer {
             tokenIn: tokenIn,
             tokenOut: tokenOut,
             tokenInAmount: tokenInAmount,
-            tokenOutAmount: tokenOutAmount,
+            minTokenOutAmount: minTokenOutAmount,
             priceTolerance: priceTolerance,
             minReserve: minReserve,
             oraclePair: pair,
@@ -159,18 +164,15 @@ contract GnosisProtocolRelayer {
         );
 
         uint256 expectedAmountMin = expectedAmount.sub(expectedAmount.mul(order.priceTolerance) / PARTS_PER_MILLION);
-        uint256 expectedTokenOutAmount = order.tokenOutAmount;
-        require(
-            expectedAmountMin >= expectedTokenOutAmount.sub(expectedTokenOutAmount.mul(order.priceTolerance) / PARTS_PER_MILLION),
-            'GnosisProtocolRelayer: INVALID_PRICE_RANGE'
-        );
+        
+        require(expectedAmountMin >= order.minTokenOutAmount), 'GnosisProtocolRelayer: INVALID_PRICE_RANGE');
         require(expectedAmountMin <= UINT128_MAX_VALUE,'GnosisProtocolRelayer: AMOUNT_OUT_OF_RANGE');
        
         /* Calculate batch Deadline (5 Minutes window) */
         uint32 validUntil = uint32(order.deadline/BATCH_TIME);
         uint256 gpOrderId = IBatchExchange(batchExchange).placeOrder(buyToken, sellToken, validUntil, uint128(expectedAmountMin), order.tokenInAmount);
         order.gpOrderId = gpOrderId;
-        emit PlacedTrade(orderIndex, gpOrderId);
+        emit PlacedTrade(orderIndex, gpOrderId, buyToken, sellToken, validUntil, uint128(expectedAmountMin), order.tokenInAmount);
     }
 
     function cancelOrder(uint256 orderIndex) external {
