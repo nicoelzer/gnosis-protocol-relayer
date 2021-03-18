@@ -165,7 +165,7 @@ contract GnosisProtocolRelayer {
 
         uint256 expectedAmountMin = expectedAmount.sub(expectedAmount.mul(order.priceTolerance) / PARTS_PER_MILLION);
         
-        require(expectedAmountMin >= order.minTokenOutAmount), 'GnosisProtocolRelayer: INVALID_PRICE_RANGE');
+        require(expectedAmountMin >= order.minTokenOutAmount, 'GnosisProtocolRelayer: INVALID_PRICE_RANGE');
         require(expectedAmountMin <= UINT128_MAX_VALUE,'GnosisProtocolRelayer: AMOUNT_OUT_OF_RANGE');
        
         /* Calculate batch Deadline (5 Minutes window) */
