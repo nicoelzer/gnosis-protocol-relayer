@@ -50,7 +50,8 @@ module.exports = {
     },
     xdai: {
       url: `https://dai.poa.network`,
-      accounts: [PRIVATE_KEY]
+      accounts: [PRIVATE_KEY],
+      gasPrice: 130000000000
     }
   }
 };

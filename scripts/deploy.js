@@ -30,7 +30,7 @@ async function main() {
       break;
     case "xdai":
       WETH = "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d";
-      owner = "0xA601aeD34dda12fF760d8ABb64Fd4Eb3664E35Af";
+      owner = "0x40035B9144baC13A0ca93003526f77dF3a8E2b55";
       batchExchange = "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313";
       epochTokenLocker = "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313";
       honeyswapFactory = "0xa818b4f111ccac7aa31d0bcc0806d64f2e0737d7";
