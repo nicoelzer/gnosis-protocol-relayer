@@ -4,3 +4,5 @@ contracts/.flattened
 .openzeppelin/.session
 .env
 yarn.lock
+artifacts/
+cache/
