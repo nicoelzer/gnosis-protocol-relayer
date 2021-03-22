@@ -55,7 +55,6 @@ contract GnosisProtocolRelayer {
         uint128 tokenOutAmount;
         uint256 startDate;
         uint256 deadline;
-        uint256 oracleId;
         uint256 gpOrderId;
         bool executed;
     }
@@ -220,7 +219,6 @@ contract GnosisProtocolRelayer {
             tokenOutAmount: tokenOutAmount,
             startDate: startDate,
             deadline: deadline,
-            oracleId: 0,
             gpOrderId: 0,
             executed: false
         });

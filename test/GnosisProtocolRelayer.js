@@ -885,12 +885,12 @@ contract("GnosisProtcolRelayer", () => {
             value: expandTo18Decimals(1),
           }
         );
-
+        
         const response = await dxRelayer.GetOrderDetails(0);
         expect(await response.tokenIn).to.eq(tokenA.address);
         expect(await response.tokenOut).to.eq(tokenB.address);
         expect(await response.tokenInAmount).to.eq(expandTo18Decimals(10));
-        expect(await response.tokenOutAmount).to.eq(expandTo18Decimals(10));
+        expect(await response.minTokenOutAmount).to.eq(expandTo18Decimals(10));
         expect(await response.priceTolerance).to.eq(defaultTolerance);
         expect(await response.minReserve).to.eq(defaultMinReserve);
         const pairAddress = await dxswapFactory.getPair(
