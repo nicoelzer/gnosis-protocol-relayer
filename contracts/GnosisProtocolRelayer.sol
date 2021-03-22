@@ -28,15 +28,6 @@ contract GnosisProtocolRelayer {
         uint128 tokenInAmount
     );
 
-    event PlacedExactTrade(
-        uint256 _gpOrderID,
-        uint16 buyToken,
-        uint16 sellToken,
-        uint32 validUntil,
-        uint128 expectedAmountMin,
-        uint128 tokenInAmount
-    );
-
     event WithdrawnExpiredOrder(
         uint256 indexed _orderIndex
     );
@@ -57,6 +48,18 @@ contract GnosisProtocolRelayer {
         bool executed;
     }
 
+    struct ExactOrder {
+        address tokenIn;
+        address tokenOut;
+        uint128 tokenInAmount;
+        uint128 tokenOutAmount;
+        uint256 startDate;
+        uint256 deadline;
+        uint256 oracleId;
+        uint256 gpOrderId;
+        bool executed;
+    }
+
     uint256 public immutable GAS_ORACLE_UPDATE = 168364;
     uint256 public immutable PARTS_PER_MILLION = 1000000;
     uint256 public immutable BOUNTY = 0.01 ether;
@@ -73,6 +76,7 @@ contract GnosisProtocolRelayer {
     OracleCreator public oracleCreator;
     uint256 public orderCount;
     mapping(uint256 => Order) public orders;
+    mapping(uint256 => ExactOrder) public exactOrders;
     mapping(address => bool) public exchangeFactoryWhitelist;
 
     constructor(
@@ -184,20 +188,19 @@ contract GnosisProtocolRelayer {
         emit PlacedTrade(orderIndex, gpOrderId, buyToken, sellToken, validUntil, uint128(expectedAmountMin), order.tokenInAmount);
     }
 
-    function placeExactTrade(
+    function orderExactTrade(
         address tokenIn,
         address tokenOut,
         uint128 tokenInAmount,
-        uint128 minTokenOutAmount,
+        uint128 tokenOutAmount,
         uint256 startDate,
         uint256 deadline
-    ) external {
+    ) external returns (uint256 orderIndex){
         require(block.timestamp <= deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
-        require(block.timestamp > startDate, 'GnosisProtocolRelayer: FUTURE_STARTDATE');
         require(deadline <= UINT32_MAX_VALUE, 'GnosisProtocolRelayer: INVALID_DEADLINE');
         require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
         require(tokenIn != tokenOut, 'GnosisProtocolRelayer: INVALID_PAIR');
-        require(tokenInAmount > 0 && minTokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
+        require(tokenInAmount > 0 && tokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
 
         if (tokenIn == address(0)) {
             require(address(this).balance >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFICIENT_ETH');
@@ -207,13 +210,41 @@ contract GnosisProtocolRelayer {
             tokenOut = WETH;
         }
 
-        /* Lookup TokenIds in Gnosis Protocol */
-        uint16 sellToken = IBatchExchange(batchExchange).tokenAddressToIdMap(tokenIn);
-        uint16 buyToken = IBatchExchange(batchExchange).tokenAddressToIdMap(tokenOut);
-        uint32 validUntil = uint32(deadline/BATCH_TIME);
+        require(IERC20(tokenIn).balanceOf(address(this)) >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFIENT_TOKEN_IN');
 
-        uint256 gpOrderId = IBatchExchange(batchExchange).placeOrder(buyToken, sellToken, validUntil, minTokenOutAmount, tokenInAmount);
-        emit PlacedExactTrade(gpOrderId, buyToken, sellToken, validUntil, minTokenOutAmount, tokenInAmount);
+        orderIndex = _OrderIndex();
+        exactOrders[orderIndex] = ExactOrder({
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
+            tokenInAmount: tokenInAmount,
+            tokenOutAmount: tokenOutAmount,
+            startDate: startDate,
+            deadline: deadline,
+            oracleId: 0,
+            gpOrderId: 0,
+            executed: false
+        });
+
+        // If startDate is in the past the order can be placed immediately
+        if (block.timestamp > startDate) {
+            placeExactTrade(orderIndex);
+        }
+    }
+
+    function placeExactTrade(uint256 orderIndex) public {
+        ExactOrder storage order = exactOrders[orderIndex];
+        require(orderIndex < orderCount, 'GnosisProtocolRelayer: INVALID_ORDER');
+        require(!order.executed, 'GnosisProtocolRelayer: ORDER_EXECUTED');
+        require(block.timestamp <= order.deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
+        require(block.timestamp > order.startDate , 'GnosisProtocolRelayer: FUTURE_STARTDATE');
+
+        /* Lookup TokenIds in Gnosis Protocol */
+        uint16 sellToken = IBatchExchange(batchExchange).tokenAddressToIdMap(order.tokenIn);
+        uint16 buyToken = IBatchExchange(batchExchange).tokenAddressToIdMap(order.tokenOut);
+        uint32 validUntil = uint32(order.deadline/BATCH_TIME);
+
+        uint256 gpOrderId = IBatchExchange(batchExchange).placeOrder(buyToken, sellToken, validUntil, order.tokenOutAmount, order.tokenInAmount);
+        emit PlacedTrade(orderIndex, gpOrderId, buyToken, sellToken, validUntil, order.tokenOutAmount, order.tokenInAmount);
     }
 
     function cancelOrder(uint256 orderIndex) external {
