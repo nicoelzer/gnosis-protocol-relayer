@@ -28,6 +28,15 @@ contract GnosisProtocolRelayer {
         uint128 tokenInAmount
     );
 
+    event PlacedExactTrade(
+        uint256 _gpOrderID,
+        uint16 buyToken,
+        uint16 sellToken,
+        uint32 validUntil,
+        uint128 expectedAmountMin,
+        uint128 tokenInAmount
+    );
+
     event WithdrawnExpiredOrder(
         uint256 indexed _orderIndex
     );
@@ -173,6 +182,38 @@ contract GnosisProtocolRelayer {
         uint256 gpOrderId = IBatchExchange(batchExchange).placeOrder(buyToken, sellToken, validUntil, uint128(expectedAmountMin), order.tokenInAmount);
         order.gpOrderId = gpOrderId;
         emit PlacedTrade(orderIndex, gpOrderId, buyToken, sellToken, validUntil, uint128(expectedAmountMin), order.tokenInAmount);
+    }
+
+    function placeExactTrade(
+        address tokenIn,
+        address tokenOut,
+        uint128 tokenInAmount,
+        uint128 minTokenOutAmount,
+        uint256 startDate,
+        uint256 deadline
+    ) external {
+        require(block.timestamp <= deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
+        require(block.timestamp > startDate, 'GnosisProtocolRelayer: FUTURE_STARTDATE');
+        require(deadline <= UINT32_MAX_VALUE, 'GnosisProtocolRelayer: INVALID_DEADLINE');
+        require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
+        require(tokenIn != tokenOut, 'GnosisProtocolRelayer: INVALID_PAIR');
+        require(tokenInAmount > 0 && minTokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
+
+        if (tokenIn == address(0)) {
+            require(address(this).balance >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFICIENT_ETH');
+            tokenIn = WETH;
+            IWETH(WETH).deposit{value: tokenInAmount}();
+        } else if (tokenOut == address(0)) {
+            tokenOut = WETH;
+        }
+
+        /* Lookup TokenIds in Gnosis Protocol */
+        uint16 sellToken = IBatchExchange(batchExchange).tokenAddressToIdMap(tokenIn);
+        uint16 buyToken = IBatchExchange(batchExchange).tokenAddressToIdMap(tokenOut);
+        uint32 validUntil = uint32(deadline/BATCH_TIME);
+
+        uint256 gpOrderId = IBatchExchange(batchExchange).placeOrder(buyToken, sellToken, validUntil, minTokenOutAmount, tokenInAmount);
+        emit PlacedExactTrade(gpOrderId, buyToken, sellToken, validUntil, minTokenOutAmount, tokenInAmount);
     }
 
     function cancelOrder(uint256 orderIndex) external {

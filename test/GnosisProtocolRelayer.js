@@ -258,7 +258,7 @@ contract("GnosisProtcolRelayer", () => {
               value: expandTo18Decimals(5),
             }
           )
-        ).to.be.revertedWith("GnosisProtocolRelayer: INSUFFIENT_ETH");
+        ).to.be.revertedWith("GnosisProtocolRelayer: INSUFFICIENT_ETH");
       });
 
       it("cannot place order with insufficient token value", async function () {
@@ -723,7 +723,6 @@ contract("GnosisProtcolRelayer", () => {
 
         await expect(dxRelayer.placeTrade(0))
           .to.emit(dxRelayer, "PlacedTrade")
-          .withArgs(0, 0);
       });
 
       it("cannot place a trade twice", async function () {
@@ -780,7 +779,6 @@ contract("GnosisProtcolRelayer", () => {
 
         await expect(dxRelayer.placeTrade(0))
           .to.emit(dxRelayer, "PlacedTrade")
-          .withArgs(0, 0);
       
         await expect(dxRelayer.placeTrade(0)).to.be.revertedWith(
           "GnosisProtocolRelayer: ORDER_EXECUTED"
