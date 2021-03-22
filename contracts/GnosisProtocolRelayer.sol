@@ -185,7 +185,7 @@ contract GnosisProtocolRelayer {
         emit PlacedTrade(orderIndex, gpOrderId, buyToken, sellToken, validUntil, uint128(expectedAmountMin), order.tokenInAmount);
     }
 
-    function orderExactTrade(
+    function placeExactTrade(
         address tokenIn,
         address tokenOut,
         uint128 tokenInAmount,
