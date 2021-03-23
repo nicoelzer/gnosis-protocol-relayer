@@ -192,7 +192,7 @@ contract GnosisProtocolRelayer {
         uint128 tokenOutAmount,
         uint256 startDate,
         uint256 deadline
-    ) external returns (uint256 orderIndex){
+    ) external {
         require(startDate < deadline, 'GnosisProtocolRelayer: INVALID_STARTDATE');
         require(block.timestamp <= deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
         require(deadline <= UINT32_MAX_VALUE, 'GnosisProtocolRelayer: INVALID_DEADLINE');
@@ -229,6 +229,9 @@ contract GnosisProtocolRelayer {
         uint128[] memory buyAmounts = new uint128[](1);
         uint128[] memory sellAmounts = new uint128[](1);
         
+         /* Lookup TokenIds in Gnosis Protocol */
+        sellTokens[0] = IBatchExchange(batchExchange).tokenAddressToIdMap(tokenIn);
+        buyTokens[0] = IBatchExchange(batchExchange).tokenAddressToIdMap(tokenOut);
         validFroms[0] = uint32(startDate/BATCH_TIME);
         validUntils[0] = uint32(deadline/BATCH_TIME);
         buyAmounts[0] = tokenOutAmount;
