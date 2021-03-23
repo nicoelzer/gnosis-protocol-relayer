@@ -193,12 +193,13 @@ contract GnosisProtocolRelayer {
         uint256 startDate,
         uint256 deadline
     ) external returns (uint256 orderIndex){
-        require(startDate < deadline , 'GnosisProtocolRelayer: INVALID_STARTDATE');
+        require(startDate < deadline, 'GnosisProtocolRelayer: INVALID_STARTDATE');
         require(block.timestamp <= deadline, 'GnosisProtocolRelayer: DEADLINE_REACHED');
         require(deadline <= UINT32_MAX_VALUE, 'GnosisProtocolRelayer: INVALID_DEADLINE');
         require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
         require(tokenIn != tokenOut, 'GnosisProtocolRelayer: INVALID_PAIR');
         require(tokenInAmount > 0 && tokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
+        
 
         if (tokenIn == address(0)) {
             require(address(this).balance >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFICIENT_ETH');
@@ -210,16 +211,23 @@ contract GnosisProtocolRelayer {
 
         require(IERC20(tokenIn).balanceOf(address(this)) >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFIENT_TOKEN_IN');
 
+        /* Extend startDate if needed, to make sure the order will be placed on GP */
+        if(startDate <= block.timestamp){
+          startDate = startDate.add(120);
+        }
+
+        /* Approve token on Gnosis Protocol */
+        TransferHelper.safeApprove(tokenIn, epochTokenLocker, tokenInAmount);
+
+        /* Deposit token in Gnosis Protocol */
+        IEpochTokenLocker(epochTokenLocker).deposit(tokenIn, tokenInAmount);
+
         uint16[] memory sellTokens = new uint16[](1);
         uint16[] memory buyTokens = new uint16[](1);
         uint32[] memory validFroms = new uint32[](1);
         uint32[] memory validUntils = new uint32[](1);
         uint128[] memory buyAmounts = new uint128[](1);
         uint128[] memory sellAmounts = new uint128[](1);
-
-        /* Lookup TokenIds on Gnosis Protocol */
-        sellTokens[0] = IBatchExchange(batchExchange).tokenAddressToIdMap(tokenIn);
-        buyTokens[0] = IBatchExchange(batchExchange).tokenAddressToIdMap(tokenOut);
         
         validFroms[0] = uint32(startDate/BATCH_TIME);
         validUntils[0] = uint32(deadline/BATCH_TIME);
