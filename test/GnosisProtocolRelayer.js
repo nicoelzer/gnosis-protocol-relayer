@@ -788,11 +788,6 @@ contract("GnosisProtcolRelayer", () => {
     });
 
     describe("Cancel trade", function () {
-      it("can only be executed for valid orders", async function () {
-        await expect(dxRelayer.cancelOrder(3)).to.be.revertedWith(
-          "GnosisProtocolRelayer: INVALID_ORDER"
-        );
-      });
 
       it("can only be executed by owner", async function () {
         await dxswapFactory.createPair(tokenA.address, WETH.address);

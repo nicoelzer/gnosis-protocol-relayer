@@ -213,7 +213,7 @@ contract GnosisProtocolRelayer {
 
         /* Extend startDate if needed, to make sure the order will be placed on GP */
         if(startDate <= block.timestamp){
-          startDate = startDate.add(120);
+          startDate = block.timestamp.add(ORACLE_WINDOW_TIME) < deadline ? block.timestamp.add(ORACLE_WINDOW_TIME) : startDate;
         }
 
         /* Approve token on Gnosis Protocol */
