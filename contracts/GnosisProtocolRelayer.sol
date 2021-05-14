@@ -199,7 +199,6 @@ contract GnosisProtocolRelayer {
         require(msg.sender == owner, 'GnosisProtocolRelayer: CALLER_NOT_OWNER');
         require(tokenIn != tokenOut, 'GnosisProtocolRelayer: INVALID_PAIR');
         require(tokenInAmount > 0 && tokenOutAmount > 0, 'GnosisProtocolRelayer: INVALID_TOKEN_AMOUNT');
-        
 
         if (tokenIn == address(0)) {
             require(address(this).balance >= tokenInAmount, 'GnosisProtocolRelayer: INSUFFICIENT_ETH');

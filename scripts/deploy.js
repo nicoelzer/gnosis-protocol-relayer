@@ -32,12 +32,13 @@ async function main() {
       break;
     case "xdai":
       WETH = "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d";
-      owner = "0xe716ec63c5673b3a4732d22909b38d779fa47c3f";
+      owner = "0x40035B9144baC13A0ca93003526f77dF3a8E2b55";
       batchExchange = "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313";
       epochTokenLocker = "0x25B06305CC4ec6AfCF3E7c0b673da1EF8ae26313";
       honeyswapFactory = "0xa818b4f111ccac7aa31d0bcc0806d64f2e0737d7";
       swaprFactory = "0x5D48C95AdfFD4B40c1AAADc4e08fc44117E02179";
-      ammWhitelist = [swaprFactory,honeyswapFactory,];
+      baoFactory = "0x45DE240fbE2077dd3e711299538A09854FAE9c9b";
+      ammWhitelist = [swaprFactory,honeyswapFactory,baoFactory,];
       break;
   }
 
